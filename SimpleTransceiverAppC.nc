@@ -22,7 +22,7 @@ implementation {
 
   App.AMControl -> ActiveMessageC;
 
-  App.AMReceive -> AMReceiverC;
+  App.Receive -> AMReceiverC;
 
   App.AMSend -> AMSenderC;
   App.Packet -> AMSenderC;

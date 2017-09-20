@@ -9,7 +9,7 @@ module SimpleTransceiverC @safe() {
 
     interface SplitControl as AMControl;
 
-    interface AMReceive;
+    interface Receive;
     interface AMSend;
 
     interface Packet;
@@ -22,7 +22,9 @@ implementation {
 
   const int T = 250;
 
-  const N_NEIGHBORS = 2;
+  const int N_NEIGHBORS = 2;
+
+  void sendResponse(message_t* msg);
 
   message_t requestPacket;
   message_t responsePacket;
@@ -33,22 +35,20 @@ implementation {
   } MessageType;
 
   typedef nx_struct Payload {
-    MessageType messageType;
+    nx_uint8_t messageType;
   } Payload;
-
-  int state = 0
 
   bool requestSendInProgress;
   uint16_t responseCounter = -1;
 
   event void Boot.booted() {
-    dbg("SimpleTransceiverC", "[%d] booted (TEST: does nodeId match address? %d)\n", TOS_NODE_ID, call AMPacket.address())
+    dbg("SimpleTransceiverC", "[%d] booted (TEST: does nodeId match address? %d)\n", TOS_NODE_ID, call AMPacket.address());
     call AMControl.start();
   }
 
   event void AMControl.startDone(error_t err) {
     if (err == SUCCESS) {
-      call MilliTimer.startPeriodic(T);
+      call IntervalTimer.startPeriodic(T);
     }
     else {
       call AMControl.start();
@@ -61,6 +61,8 @@ implementation {
 
   event void IntervalTimer.fired() {
 
+    Payload* payload;
+
     if (requestSendInProgress) {
       return;
     }
@@ -68,15 +70,15 @@ implementation {
       // responseCounter == -1 is the initial state, before any requests has been sent
       if (responseCounter != -1) {
         if (responseCounter < N_NEIGHBORS) {
-          dbg("SimpleTransceiverC", "[%d] failure\n", TOS_NODE_ID)
+          dbg("SimpleTransceiverC", "[%d] failure\n", TOS_NODE_ID);
         } else {
-          dbg("SimpleTransceiverC", "[%d] success\n", TOS_NODE_ID)
+          dbg("SimpleTransceiverC", "[%d] success\n", TOS_NODE_ID);
         }
       }
 
       responseCounter = 0;
 
-      Payload* payload = (Payload*)(call Packet.getPayload(&requestPacket, sizeof(Payload)));
+      payload = (Payload*)(call Packet.getPayload(&requestPacket, sizeof(Payload)));
 
       payload->messageType = REQUEST;
 
@@ -86,8 +88,6 @@ implementation {
       }
     }
   }
-
-
 
   event void AMSend.sendDone(message_t* msg, error_t error) {
 
@@ -106,7 +106,7 @@ implementation {
       Payload* p = (Payload*)payload;
 
       if (p->messageType == REQUEST) {
-        sendResponse(msg)
+        sendResponse(msg);
       }
 
       if (p->messageType == RESPONSE) {
@@ -115,7 +115,6 @@ implementation {
     }
     return msg;
   }
-
 
   void sendResponse(message_t* msg) {
     // start random timer:
