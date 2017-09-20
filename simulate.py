@@ -13,8 +13,8 @@ nodes = [t.getNode(x) for x in range(10)]
 
 def connect(x,y):
     if y:
-        r.add(x.id(), y.id(), -30.0)
-        r.add(y.id(), x.id(), -30.0)
+        r.add(x.id(), y.id(), -60.0)
+        r.add(y.id(), x.id(), -60.0)
     return y
 
 reduce(connect, nodes + nodes[:1])

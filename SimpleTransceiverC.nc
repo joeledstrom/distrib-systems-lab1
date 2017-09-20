@@ -83,14 +83,14 @@ implementation {
       payload->messageType = REQUEST;
 
       if (call AMSend.send(AM_BROADCAST_ADDR, &requestPacket, sizeof(Payload)) == SUCCESS) {
-	       //dbg("SimpleTransceiverC", "SimpleTransceiverC: packet sent.\n", counter);
+	       dbg("SimpleTransceiverC", "[%d] sendStart\n", TOS_NODE_ID);
          requestSendInProgress = TRUE;
       }
     }
   }
 
   event void AMSend.sendDone(message_t* msg, error_t error) {
-
+    dbg("SimpleTransceiverC", "[%d] sendDone\n", TOS_NODE_ID);
     if (msg == &requestPacket) {
       dbg("SimpleTransceiverC", "[%d] Req Sent!\n", TOS_NODE_ID);
       requestSendInProgress = FALSE;
