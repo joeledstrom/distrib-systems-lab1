@@ -38,8 +38,8 @@ implementation {
     nx_uint8_t messageType;
   } Payload;
 
-  bool requestSendInProgress;
-  uint16_t responseCounter = -1;
+  bool requestSendInProgress = FALSE;
+  int16_t responseCounter = -1;
 
   event void Boot.booted() {
     dbg("SimpleTransceiverC", "[%d] booted (TEST: does nodeId match address? %d)\n", TOS_NODE_ID, call AMPacket.address());

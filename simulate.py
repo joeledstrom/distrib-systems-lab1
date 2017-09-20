@@ -33,7 +33,7 @@ for line in lines:
 
 for n in nodes:
     n.bootAtTime(random.randint(1, 82123411))
-    n.createNoiseModel
+    n.createNoiseModel()
 
 for i in range(0, 20000):
     t.runNextEvent();
