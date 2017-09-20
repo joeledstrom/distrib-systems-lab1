@@ -101,7 +101,8 @@ implementation {
     }
   }
 
-  event message_t* Receive.receive(message_t* msg, void* payload, uint8_t payloadLen) {   //4. when a message is received, come to here
+  event message_t* Receive.receive(message_t* msg, void* payload, uint8_t payloadLen) {
+    dbg("SimpleTransceiverC", "[%d] Received message from: %d!\n", TOS_NODE_ID, call AMPacket.source(msg));
     if (payloadLen == sizeof(Payload)) {
       Payload* p = (Payload*)payload;
 
@@ -123,7 +124,7 @@ implementation {
   }
 
   event void ResponseTimer.fired() {
-    // maybe use call AMPacket.sourceAddress(msg) to get the sender addr
+    // maybe use call AMPacket.source(msg) to get the sender addr
     // unicast to sender
   }
 
