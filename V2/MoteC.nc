@@ -1,13 +1,3 @@
-/*
-
-Other implementation, using a queue for buffered messages:
-  A send-loop pops messages from the buffers.
-  It is activated when queue goes from size 0 to 1. (after a receive request)
-  It is deactivated when queue is empty. (after a timer.fired)
-
-*/
-
-
 #ifndef MOTE_H
 #define MOTE_H
  
