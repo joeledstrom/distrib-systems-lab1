@@ -4,7 +4,7 @@ import sys
 t = Tossim([])    # 1. define an object of TOSSIM
 r = t.radio()    # 2. define an object of radio model
 
-t.addChannel("MoteC", sys.stdout) # 3. channels here mean formats outputing debug information (standard output or a file). 
+t.addChannel("MoteC", sys.stdout) # 3. channels here mean formats outputing debug information (standard output or a file).
 t.addChannel("REPORT", sys.stdout)            # the first parameter is the channel destination, the second is the channel.
 
 m1 = t.getNode(1)             # 4. define an object representing a specific mote.
@@ -58,7 +58,7 @@ lines = noise.readlines()
 for line in lines:
     s = line.strip()
     if s != "":
-        val = int(str)
+        val = int(s)
         m1.addNoiseTraceReading(val)
         m2.addNoiseTraceReading(val)
         m3.addNoiseTraceReading(val)
