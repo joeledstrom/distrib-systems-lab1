@@ -66,7 +66,9 @@ implementation {
     Payload* payload;
 
     if (!requestSendInProgress) {
+
       // responseCounter == -1 is the initial state, before any requests has been sent
+      // this prevents it from printing an "initial failure" at the first timer fire.
       if (responseCounter != -1) {
         if (responseCounter < N_NEIGHBORS) {
           dbg("out", "REPORT: failure\n");
@@ -76,34 +78,28 @@ implementation {
       }
 
       responseCounter = 0;
-
       payload = (Payload*)(call Packet.getPayload(&requestPacket, sizeof(Payload)));
-
       payload->messageType = REQUEST;
 
       if (call AMSend.send(AM_BROADCAST_ADDR, &requestPacket, sizeof(Payload)) == SUCCESS) {
-	       //dbg("out", "sendStart\n");
-         requestSendInProgress = TRUE;
+        dbg("out", "Req sent (broadcast to neighbors)\n");
+        requestSendInProgress = TRUE;
       } else {
-        responseCounter = -1; // to prevent printing a report, when the packet couldn't be sent
+        dbg("out", "Req send failed (broadcast to neighbors)\n");
       }
     }
   }
 
   event void AMSend.sendDone(message_t* msg, error_t error) {
-    if (msg == &requestPacket) {
-      dbg("out", "Req sent (broadcast to neighbors)\n");
+    if (msg == &requestPacket)
       requestSendInProgress = FALSE;
-    }
-
-    if (msg == &responsePacket) {
-      dbg("out", "Resp sent (unicast to %d)\n", responseAddress);
+    else if (msg == &responsePacket)
       responseSendInProgress = FALSE;
-    }
   }
 
   event message_t* Receive.receive(message_t* msg, void* payload, uint8_t payloadLen) {
     if (payloadLen == sizeof(Payload)) {
+
       Payload* p = (Payload*)payload;
 
       if (p->messageType == REQUEST) {
@@ -114,9 +110,7 @@ implementation {
         if (!responseSendInProgress) {
           sendResponse(msg);
         }
-      }
-
-      if (p->messageType == RESPONSE) {
+      } else if (p->messageType == RESPONSE) {
         dbg("out", "Resp received from: %d\n", call AMPacket.source(msg));
         responseCounter++;
       }
@@ -140,9 +134,11 @@ implementation {
     Payload* payload = (Payload*)(call Packet.getPayload(&responsePacket, sizeof(Payload)));
     payload->messageType = RESPONSE;
 
-    if (call AMSend.send(responseAddress, &responsePacket, sizeof(Payload)) != SUCCESS) {
-       dbg("out", "FAILED TO START SENDING RESPONSE TO %d\n", responseAddress);
-       requestSendInProgress = FALSE;
+    if (call AMSend.send(responseAddress, &responsePacket, sizeof(Payload)) == SUCCESS) {
+      dbg("out", "Resp sent (unicast to %d)\n", responseAddress);
+    } else {
+      dbg("out", "Resp send failed (unicast to %d)\n", responseAddress);
+      requestSendInProgress = FALSE;
     }
   }
 }
