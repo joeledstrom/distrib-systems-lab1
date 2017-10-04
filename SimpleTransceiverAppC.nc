@@ -14,6 +14,7 @@ implementation {
   components new TimerMilliC() as Timer0;
   components new TimerMilliC() as Timer1;
   components ActiveMessageC;
+  components RandomC;
 
   App.Boot -> MainC.Boot;
 
@@ -27,6 +28,8 @@ implementation {
   App.AMSend -> AMSenderC;
   App.Packet -> AMSenderC;
   App.AMPacket -> AMSenderC;
+
+  App.Random -> RandomC;
 
   //App.PacketAcknowledgements -> AMSenderC;
 }

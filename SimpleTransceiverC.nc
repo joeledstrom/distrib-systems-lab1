@@ -15,7 +15,7 @@ module SimpleTransceiverC @safe() {
     interface Packet;
 	  interface AMPacket;
 
-    //interface PacketAcknowledgements;
+    interface Random;
   }
 }
 implementation {
@@ -39,10 +39,12 @@ implementation {
   } Payload;
 
   bool requestSendInProgress = FALSE;
+  bool responseSendInProgress = FALSE;
   int16_t responseCounter = -1;
+  am_addr_t responseAddress;
 
   event void Boot.booted() {
-    dbg("SimpleTransceiverC", "[%d] booted (TEST: does nodeId match address? %d)\n", TOS_NODE_ID, call AMPacket.address());
+    dbg("out", "[%d] booted (TEST: does nodeId match address? %d)\n", TOS_NODE_ID, call AMPacket.address());
     call AMControl.start();
   }
 
@@ -63,16 +65,13 @@ implementation {
 
     Payload* payload;
 
-    if (requestSendInProgress) {
-      return;
-    }
-    else {
+    if (!requestSendInProgress) {
       // responseCounter == -1 is the initial state, before any requests has been sent
       if (responseCounter != -1) {
         if (responseCounter < N_NEIGHBORS) {
-          dbg("SimpleTransceiverC", "[%d] failure\n", TOS_NODE_ID);
+          dbg("out", "REPORT: failure\n");
         } else {
-          dbg("SimpleTransceiverC", "[%d] success\n", TOS_NODE_ID);
+          dbg("out", "REPORT: success\n");
         }
       }
 
@@ -83,34 +82,42 @@ implementation {
       payload->messageType = REQUEST;
 
       if (call AMSend.send(AM_BROADCAST_ADDR, &requestPacket, sizeof(Payload)) == SUCCESS) {
-	       dbg("SimpleTransceiverC", "[%d] sendStart\n", TOS_NODE_ID);
+	       //dbg("out", "sendStart\n");
          requestSendInProgress = TRUE;
+      } else {
+        responseCounter = -1; // to prevent printing a report, when the packet couldn't be sent
       }
     }
   }
 
   event void AMSend.sendDone(message_t* msg, error_t error) {
-    dbg("SimpleTransceiverC", "[%d] sendDone\n", TOS_NODE_ID);
     if (msg == &requestPacket) {
-      dbg("SimpleTransceiverC", "[%d] Req Sent!\n", TOS_NODE_ID);
+      dbg("out", "Req sent (broadcast to neighbors)\n");
       requestSendInProgress = FALSE;
     }
 
     if (msg == &responsePacket) {
-
+      dbg("out", "Resp sent (unicast to %d)\n", responseAddress);
+      responseSendInProgress = FALSE;
     }
   }
 
   event message_t* Receive.receive(message_t* msg, void* payload, uint8_t payloadLen) {
-    dbg("SimpleTransceiverC", "[%d] Received message from: %d!\n", TOS_NODE_ID, call AMPacket.source(msg));
     if (payloadLen == sizeof(Payload)) {
       Payload* p = (Payload*)payload;
 
       if (p->messageType == REQUEST) {
-        sendResponse(msg);
+        dbg("out", "Req received from: %d (can answer? %s)\n",
+          call AMPacket.source(msg),
+          !responseSendInProgress ? "yes" : "no");
+
+        if (!responseSendInProgress) {
+          sendResponse(msg);
+        }
       }
 
       if (p->messageType == RESPONSE) {
+        dbg("out", "Resp received from: %d\n", call AMPacket.source(msg));
         responseCounter++;
       }
     }
@@ -118,14 +125,24 @@ implementation {
   }
 
   void sendResponse(message_t* msg) {
-    // start random timer:
-    //   use ResponseTimer.startOneShot(ms)
-    // set busy
+
+    int responseDelay = 2 * T * (call Random.rand16()) / (double)UINT16_MAX;
+
+    dbg("out", "Starting response timer to fire with delay: %d\n", responseDelay);
+
+    responseSendInProgress = TRUE;
+    responseAddress = call AMPacket.source(msg);
+
+    call ResponseTimer.startOneShot(responseDelay);
   }
 
   event void ResponseTimer.fired() {
-    // maybe use call AMPacket.source(msg) to get the sender addr
-    // unicast to sender
-  }
+    Payload* payload = (Payload*)(call Packet.getPayload(&responsePacket, sizeof(Payload)));
+    payload->messageType = RESPONSE;
 
+    if (call AMSend.send(responseAddress, &responsePacket, sizeof(Payload)) != SUCCESS) {
+       dbg("out", "FAILED TO START SENDING RESPONSE TO %d\n", responseAddress);
+       requestSendInProgress = FALSE;
+    }
+  }
 }

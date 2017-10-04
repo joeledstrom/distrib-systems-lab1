@@ -4,7 +4,7 @@ import sys, random
 t = Tossim([])
 r = t.radio();
 
-t.addChannel("SimpleTransceiverC", sys.stdout)
+t.addChannel("out", sys.stdout)
 #t.addChannel("TestACK", sys.stdout)
 
 
