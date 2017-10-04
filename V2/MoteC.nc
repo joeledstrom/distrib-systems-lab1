@@ -1,13 +1,13 @@
 #ifndef MOTE_H
 #define MOTE_H
- 
+
 
 // "external type" to ignore endianness
 typedef nx_struct packet {
      nx_uint16_t seq;
      nx_uint16_t type;
 } packet_t;
- 
+
 #endif
 
 module MoteC
@@ -28,7 +28,7 @@ implementation
 enum {
     EXPECTED_RESPONSES = 2,
     REQUEST = 100, RESPONSE = 200,
-    TIMER_PERIOD_MILLI = 250, 
+    TIMER_PERIOD_MILLI = 200,
 };
 message_t request ;// = {0, REQUEST}; // buffered request
 message_t response; // = {0, RESPONSE}; // buffered response
@@ -61,17 +61,19 @@ event void RadioControl.stopDone(error_t error) {} // ignore radio stop event
 event void BTimer.fired() // time to broadcast
 {
     packet_t *payload;
-    if (req_lock) return; // For the duration of the send attempt, the packet is owned by the radio
-                          // and user code must not access it; drops message.
-    
+
     // check if the previous broadcast got the expected number of responses
     if (response_counter < EXPECTED_RESPONSES)
         dbg("REPORT", "FAILURE; %d/%d responses received\n", response_counter, EXPECTED_RESPONSES);
     else
         dbg("REPORT", "SUCCESS; %d/%d responses received\n", response_counter, EXPECTED_RESPONSES);
+
     // prepare for next broadcast period:
     response_counter = 0;
     sequence += 1; // wraps around
+
+    if (req_lock) return; // For the duration of the send attempt, the packet is owned by the radio
+                          // and user code must not access it; drops message.
 
     // send broadcast
     payload = call AMSend.getPayload(&request, sizeof (packet_t));
@@ -81,7 +83,7 @@ event void BTimer.fired() // time to broadcast
         if (call AMSend.send(AM_BROADCAST_ADDR, &request, sizeof (packet_t)) == SUCCESS)
             req_lock = TRUE; // For the duration of the send attempt, the packet is owned by the radio, and user code must not access it.
     }
-    
+
 }
 event void RTimer.fired() // time to respond
 {
@@ -112,8 +114,8 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len)
             if (res_lock) return msg; // can't touch the buffered response; drop message
             if (call RTimer.isRunning()) return msg; // a response is already pending; drop the new message
 
-            call RTimer.startOneShot(2 * TIMER_PERIOD_MILLI * (call Random.rand16() / 65535.0));
-            
+            call RTimer.startOneShot(2 * TIMER_PERIOD_MILLI * (call Random.rand16() / 65535.0)); // timer in range: [0, 2t]
+
             // update the buffered response
             msg_payload = payload; // cast to packet_t
             res_payload = call AMSend.getPayload(&response, sizeof (packet_t));

@@ -16,7 +16,7 @@ m6 = t.getNode(6)
 m7 = t.getNode(7)
 m8 = t.getNode(8)
 m9 = t.getNode(9)
-m10 = t.getNode(10)
+m10 = t.getNode(0)
 
 
 m1.bootAtTime(345321)        # 5. start the mote; ticks,time unit.   t.ticksPerSecond(), one second.  10 to the power 10 ticks per second.
